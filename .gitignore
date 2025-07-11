@@ -1,0 +1,5 @@
+# Model files
+*.pkl
+
+# Dataset files
+*.csv
