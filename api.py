@@ -4,10 +4,18 @@ import joblib
 import psutil
 import time
 import pandas as pd
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import List, Literal
+from fastapi import Security, HTTPException, status
+from fastapi.security.api_key import APIKeyHeader
+
+load_dotenv()
+API_KEY = os.environ.get("TITANIC_API_KEY", "fallback_default_key")
+API_KEY_NAME = "X-API-Key"
+api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
 # Configura logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s | %(levelname)s | %(message)s')
@@ -53,6 +61,15 @@ app = FastAPI(
 # Simple global request counter for profiling
 REQUEST_COUNTER = 0
 
+def get_api_key(api_key_header: str = Security(api_key_header)):
+    if api_key_header == API_KEY:
+        return api_key_header
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing API Key",
+        )
+
 @app.middleware("http")
 async def add_profiling(request: Request, call_next):
     global REQUEST_COUNTER
@@ -71,7 +88,8 @@ async def add_profiling(request: Request, call_next):
 @app.post("/predict")
 def predict(
     passengers: List[Passenger],
-    model: Literal["rf", "svc"] = Query("rf", description="Which model to use: 'rf' (Random Forest) or 'svc' (SVC)")
+    model: Literal["rf", "svc"] = Query("rf", description="Which model to use: 'rf' (Random Forest) or 'svc' (SVC)"),
+    api_key: str = Security(get_api_key)
 ):
     try:
         X = pd.DataFrame([
@@ -105,7 +123,10 @@ def health_check():
     return {"status": "ok", "requests_handled": REQUEST_COUNTER}
 
 @app.get("/feature_importance")
-def feature_importance(model: Literal["rf"] = "rf"):
+def feature_importance(
+    model: Literal["rf"] = "rf",
+    api_key: str = Security(get_api_key)
+):
     if model != "rf":
         raise HTTPException(status_code=400, detail="Feature importance only available for Random Forest.")
     importances = rf_model.feature_importances_
