@@ -1,0 +1,95 @@
+name: Titanic ML Challenge CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Lint code (optional)
+        run: |
+          .venv/bin/pip install flake8
+          .venv/bin/flake8 .
+
+      - name: Run tests
+        env:
+          TITANIC_API_KEY: titanic_challengue_key   # Usar un key de prueba
+        run: |
+          cp .env.example .env || echo "TITANIC_API_KEY=titanic_challengue_key" > .env
+          .venv/bin/pytest test_api.py
+
+  docker-build-pipeline:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build pipeline Docker image
+        run: docker build -f Dockerfile.pipeline -t titanic-pipeline .
+
+  docker-build-api:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build API Docker image
+        run: docker build -f Dockerfile.api -t titanic-api .
+
+  push-docker-images:
+    runs-on: ubuntu-latest
+    needs: [docker-build-pipeline, docker-build-api]
+    steps:
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Push images
+        run: |
+          docker tag titanic-pipeline ${{ secrets.DOCKERHUB_USERNAME }}/titanic-pipeline:latest
+          docker tag titanic-api ${{ secrets.DOCKERHUB_USERNAME }}/titanic-api:latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/titanic-pipeline:latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/titanic-api:latest
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: docker-build-api
+    steps:
+      - name: Deploy to AWS EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            # Stop and remove previous container if exists
+            docker stop titanic-api || true
+            docker rm titanic-api || true
+            # Pull latest image from DockerHub
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}//titanic-api:latest
+            docker run -d --name titanic-api -p 8000:8000 \
+              -v ~/titanic/models:/app/models --env-file ~/titanic/.env titanic-api
+
