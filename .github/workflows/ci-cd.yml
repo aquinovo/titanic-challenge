@@ -45,6 +45,9 @@ jobs:
         run: |
           echo "TITANIC_API_KEY=titanic_challengue_key" > .env
           pytest test_api.py
+      
+      - name: Build API Docker image
+        run: docker build -f Dockerfile.api -t titanic-api .
 
   docker-build-pipeline:
     runs-on: ubuntu-latest
