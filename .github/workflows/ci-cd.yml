@@ -1,10 +1,8 @@
 name: Titanic ML Challenge CI/CD
 
 on:
-  push:
-    branches: [ master ]
   pull_request:
-    branches: [ master ]
+    branches: [ staging ]
 
 jobs:
   build-and-test:
@@ -24,7 +22,7 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
           mkdir -p ~/.kaggle
-          echo '{"username":"aquinovo","key":"dd634f979466c579d07e96d47074d5c8"}' > ~/.kaggle/kaggle.json
+          echo '{"username":${{ secrets.KAGGLE_USERNAME }},"key":${{ secrets.KAGGLE_KEY }}}' > ~/.kaggle/kaggle.json
           chmod 600 ~/.kaggle/kaggle.json
 
       - name: Create model files
@@ -41,9 +39,9 @@ jobs:
   
       - name: Run tests
         env:
-          TITANIC_API_KEY: titanic_challengue_key
+          TITANIC_API_KEY: ${{ secrets.TITANIC_API_KEY }}
         run: |
-          echo "TITANIC_API_KEY=titanic_challengue_key" > .env
+          echo "TITANIC_API_KEY=${{ secrets.TITANIC_API_KEY }}" > .env
           pytest test_api.py
       
       - name: Build API Docker image
