@@ -60,6 +60,15 @@ jobs:
           docker tag titanic-api ${{ secrets.DOCKERHUB_USERNAME }}/titanic-api:latest
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/titanic-api:latest
       
+      - name: Copy models to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "models/*.pkl"
+          target: "~/titanic/models"
+      
       - name: Deploy to AWS EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
