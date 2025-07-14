@@ -24,6 +24,17 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Create model files
+        run: |
+          mkdir -p ./titanic/models
+          kaggle competitions download -c titanic
+          unzip titanic.zip -d titanic/
+          python main.py
+      
+      - name: Run server
+        run: |
+          uvicorn api:app --reload
+  
       - name: Run tests
         env:
           TITANIC_API_KEY: titanic_challengue_key   # Usar un key de prueba
