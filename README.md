@@ -16,6 +16,7 @@ It includes:
 - API Key security for all endpoints (loaded from `.env`).
 - Unit testing (pytest).
 - Dockerized workflow for both pipeline and API.
+- CI/CD deployment
 
 ## Model Design & Results
 
@@ -32,7 +33,7 @@ Key steps include:
 - **Random Forest:** Accuracy 0.81, F1 0.73, ROC-AUC 0.85
 - Most important features: Sex (female), Fare, and Pclass.
 
-For full details see:
+**For full details see:**
 - [rappi-ml-challenge.ipynb](./rappi-ml-challenge.ipynb)  
 - [rappi-ml-challenge.pdf](./rappi-ml-challenge.pdf)
 
@@ -44,6 +45,8 @@ For full details see:
 
 titanic-ml/
 │
+├── .github/workflows/
+│   └── ci-cd.yml
 ├── titanic/
 │   └── train.csv
 ├── models/
@@ -67,6 +70,17 @@ titanic-ml/
 ````
 **Note:**
 * You must create both titanic/ (with the train.csv file downloaded from Kaggle Titanic Dataset) and models/ folders manually before running the pipeline or API.
+
+## Requirements
+
+Before running or deploying this project, ensure you have installed:
+
+- **Python 3.11**  
+  [Download & install Python 3.11](https://www.python.org/downloads/release/python-3110/)
+- **Docker**  
+  [Install Docker](https://docs.docker.com/get-docker/)
+
+All other dependencies are handled automatically via `pip install -r requirements.txt`.
 
 ## Setup
 
@@ -100,7 +114,7 @@ titanic-ml/
 
     ```bash
     docker build -f Dockerfile.pipeline -t titanic-pipeline .
-    docker run --rm -v $PWD/data:/app/data -v $PWD/models:/app/models titanic-pipeline
+    docker run --rm -v $PWD/models:/app/models titanic-pipeline
     ```
 
 
@@ -179,7 +193,7 @@ Tests require a valid `.env` with the same API key as the running API.
 
 ```bash
 docker build -f Dockerfile.pipeline -t titanic-pipeline .
-docker run --rm -v $PWD/data:/app/data -v $PWD/models:/app/models titanic-pipeline
+docker run --rm -v $PWD/models:/app/models titanic-pipeline
 ```
 
 **Build and run API:**
@@ -194,3 +208,38 @@ docker run --rm -p 8000:8000 -v $PWD/models:/app/models --env-file .env titanic-
 * Both Random Forest and SVC models are available.
 * Choose which model to use via `model=rf` or `model=svc` in `/predict` endpoint.
 * Model metrics summary in `models/ab_testing_metrics.csv`.
+
+## CI/CD Workflow and Deploy (Staging Environment)
+
+This project uses **GitHub Actions** for continuous integration and deployment.  
+**The workflow is only triggered when a pull request is opened from `develop` to `staging`**, allowing safe automated deploys to a staging (testing) environment.
+
+**CI/CD steps:**
+1. **Runs on PR from `develop` to `staging`.**
+2. Installs all dependencies
+3. Trains and exports the models using the latest data.
+4. Runs the entire test suite (`pytest`).
+5. Builds and pushes the Docker API image to Docker Hub.
+6. Uploads the trained model files to the AWS EC2 server (staging instance).
+7. Deploys the updated API via Docker and Nginx reverse proxy on EC2 (replacing the previous container).
+
+> **Note:** This setup ensures that **only validated code on `staging` is deployed to the staging environment**, minimizing risk.
+
+**API is available (for staging/testing) at:**  
+[http://ec2-3-20-164-182.us-east-2.compute.amazonaws.com/docs](http://ec2-3-20-164-182.us-east-2.compute.amazonaws.com/docs)
+
+**(You must use the correct API key for all requests.)**
+
+
+### How to Deploy to Production?
+
+To deploy to production, open a pull request from `staging` to `master` and configure a similar workflow targeting the production EC2 server or other infrastructure.
+
+## Nginx Reverse Proxy
+
+The AWS EC2 instance hosting the API uses **Nginx as a reverse proxy** to route external HTTP traffic from port 80 to the internal FastAPI application running on port 8000 in Docker.
+
+**Why Nginx?**
+- Exposes the API on standard web ports (80 for HTTP, optionally 443 for HTTPS).
+- Enables better security, logging, and scalability.
+- Makes it easy to add SSL certificates (Let's Encrypt) in the future(production enviroment).
