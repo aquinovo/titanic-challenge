@@ -29,7 +29,7 @@ jobs:
 
       - name: Create model files
         run: |
-          mkdir -p ./titanic/models
+          mkdir -p models/
           kaggle competitions download -c titanic
           unzip titanic.zip -d titanic/
           python main.py
