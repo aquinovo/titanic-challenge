@@ -22,7 +22,7 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
           mkdir -p ~/.kaggle
-          echo '{"username":${{ secrets.KAGGLE_USERNAME }},"key":${{ secrets.KAGGLE_KEY }}}' > ~/.kaggle/kaggle.json
+          echo '{"username":"${{ secrets.KAGGLE_USERNAME }}","key":"${{ secrets.KAGGLE_KEY }}"}' > ~/.kaggle/kaggle.json
           chmod 600 ~/.kaggle/kaggle.json
 
       - name: Create model files
