@@ -30,8 +30,8 @@ jobs:
         env:
           TITANIC_API_KEY: titanic_challengue_key   # Usar un key de prueba
         run: |
-          cp .env.example .env || echo "TITANIC_API_KEY=titanic_challengue_key" > .env
-          .venv/bin/pytest test_api.py
+          echo "TITANIC_API_KEY=titanic_challengue_key" > .env
+          pytest test_api.py
 
   docker-build-pipeline:
     runs-on: ubuntu-latest
