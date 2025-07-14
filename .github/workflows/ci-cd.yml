@@ -23,6 +23,9 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
+          mkdir -p ~/.kaggle
+          echo '{"username":"aquinovo","key":"dd634f979466c579d07e96d47074d5c8"}' > ~/.kaggle/kaggle.json
+          chmod 600 ~/.kaggle/kaggle.json
 
       - name: Create model files
         run: |
