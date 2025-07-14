@@ -76,7 +76,6 @@ jobs:
             docker stop titanic-api || true
             docker rm titanic-api || true
             # Pull latest image from DockerHub
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}//titanic-api:latest
-            docker run -d --name titanic-api -p 8000:8000 \
-              -v ~/titanic/models:/app/models --env-file ~/titanic/.env titanic-api
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/titanic-api:latest
+            docker run --rm -p 8000:8000 -v $PWD/models:/app/models --env-file .env titanic-api
 
