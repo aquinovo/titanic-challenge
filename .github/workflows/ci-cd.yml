@@ -77,9 +77,9 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             # Stop and remove previous container if exists
-            docker stop titanic-api || true
-            docker rm titanic-api || true
+            docker stop ${{ secrets.DOCKERHUB_USERNAME }}/titanic-api || true
+            docker rm ${{ secrets.DOCKERHUB_USERNAME }}/titanic-api || true
             # Pull latest image from DockerHub
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/titanic-api:latest
-            docker run --rm -p 8000:8000 -v ~/titanic/models:/app/models --env-file .env ${{ secrets.DOCKERHUB_USERNAME }}/titanic-api
+            docker run --rm -p 8000:8000 -v ~/titanic/models:/app/models --env-file ~/titanic/.env ${{ secrets.DOCKERHUB_USERNAME }}/titanic-api
 
